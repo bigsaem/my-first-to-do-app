@@ -1,126 +1,74 @@
 import "./App.css";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { ListItem } from './ListItem';
+import { EditItem } from './EditItem';
 
-function ListItem(props) {
-  const [isForm, setIsForm] = useState(props.val ? false : true);
-  const [task, setValue] = useState(props.val || "");
-  const [checked, setChecked] = useState(props.checked || false);
-  const removeTask = () => {
-    localStorage.removeItem(props.index);
-    console.log("calling deleteHandler");
-    props.deleteHandler(props.index);
-  };
-  const makeTask = () => {
-    localStorage.setItem(
-      props.index,
-      JSON.stringify({ task: task, checked: checked })
-    );
-    setIsForm(false);
-  };
-  const editTask = () => {
-    setIsForm(true);
-  };
-  const checkToggle = () => {
-    localStorage.setItem(
-      props.index,
-      JSON.stringify({
-        task: task,
-        checked: !checked,
-      })
-    );
-    setChecked(!checked);
-  };
-  if (isForm) {
-    return (
-      <li key={props.index}>
-        <input
-          type="text"
-          value={task}
-          onChange={(e) => {
-            setValue(e.target.value);
-          }}
-        />
-        <button onClick={makeTask}>Enter</button>
-      </li>
-    );
-  }
-  return (
-    <li key={props.index}>
-      <input
-        type="checkbox"
-        id={`check${props.index}`}
-        onChange={checkToggle}
-        defaultChecked = {checked}
-      />
-      <label htmlFor={`check${props.index}`}>{task}</label>
-      <button onClick={editTask}>Edit</button>
-      <button onClick={removeTask}>Delete</button>
-    </li>
-  );
+const todoListKey = 'todoItems';
+const getTodoItemsFromLS = () => {
+  return JSON.parse(localStorage.getItem(todoListKey)) || [];
 }
 
-class TodoList extends React.Component {
-  constructor(props) {
-    super(props);
-    const listItemsFromDB = this.initializeList();
-    this.state = {
-      listItems: listItemsFromDB,
-    };
+const TodoList = (props) => {
+
+  const [todoItems, setTodoItems] = useState([]);
+
+  const saveTodoListToLS = (todoItems) => {
+    localStorage.setItem(todoListKey, JSON.stringify(todoItems));
   }
-  initializeList = () => {
-    const listItemsFromDB = [];
-    for (const key of Object.keys(localStorage)) {
-      const val = JSON.parse(localStorage.getItem(key));
-      listItemsFromDB.push(
-        <ListItem
-          key={key}
-          index={key}
-          val={val.task}
-          checked={val.checked}
-          deleteHandler={this.delete}
-        />
-      );
-    }
-    return listItemsFromDB;
+
+  useEffect(() => {
+    const todoItemsFromLS = getTodoItemsFromLS();
+    setTodoItems(todoItemsFromLS)
+  }, [])
+
+  const addItem = () => {
+    let newList = todoItems.slice();
+    newList.push({ id: Date.now(), task: '', checked: false, isEdit: true });
+    setTodoItems(newList);
+    saveTodoListToLS(newList);
+  };
+  const deleteItem = (todoItem) => {
+    const newList = todoItems.filter(item => todoItem !== item);
+    setTodoItems(newList);
+    saveTodoListToLS(newList);
   };
 
-  addItem = () => {
-    let newList = this.state.listItems.slice();
-    const curTime = Date.now();
-    newList.push(
-      <ListItem key={curTime} index={curTime} deleteHandler={this.delete} />
-    );
-    console.log(this.state.listItems);
-    this.setState({
-      listItems: newList,
-    });
-  };
-  delete = (key) => {
-    console.log("key", key);
-    const newList = this.state.listItems.slice();
-    newList.forEach((item, index) => {
-      if (parseInt(item.key) === parseInt(key)) {
-        newList.splice(index, 1);
-        console.log(newList)
-        this.setState({
-          listItems: newList,
-        });
-        return;
-      }
-    });
-  };
-  render() {
+  const checkItem = (todoItem) => {
+
+  }
+
+  const saveEdit = (todoItem) => {
+    const index = todoItems.findIndex(item => item.id === todoItem.id);
+    const newTodoItems = [...todoItems];
+    newTodoItems[index] = todoItem;
+    setTodoItems(newTodoItems);
+    saveTodoListToLS(newTodoItems);
+  }
+
+  const editItem = (todoItem) => {
+    
+  }
+
     return (
       <ul>
-        {this.state.listItems}
+        {todoItems.map((todoItem => (todoItem.isEdit ? 
+          <EditItem
+            todoItem={todoItem}
+            saveEdit={saveEdit}
+          /> : 
+          <ListItem
+            todoItem={todoItem}
+            deleteHandler={deleteItem}
+            checkHandler={checkItem}
+            editHandler={editItem}
+          />)))}
         <li key="add">
-          <button id="addItem" onClick={this.addItem}>
+          <button id="addItem" onClick={addItem}>
             +
           </button>
         </li>
       </ul>
     );
-  }
 }
 
 function App() {
